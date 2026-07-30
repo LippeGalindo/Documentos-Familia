@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Arquivo da Família</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF6EE;
+    --paper-dim:#F1EADA;
+    --ink:#2B2620;
+    --ink-soft:#6B6255;
+    --card:#FFFFFF;
+    --line:#E5DCC6;
+    --accent:#B5542A;
+    --ok:#3F7A52;
+    --danger:#A6455B;
+    --shadow: 0 1px 2px rgba(43,38,32,0.06), 0 6px 18px rgba(43,38,32,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  h1,h2,h3,.display{font-family:'Fraunces',serif;}
+
+  /* ---- Header ---- */
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding:14px 16px 10px;
+  }
+  .topbar-row{display:flex; align-items:center; gap:10px; justify-content:space-between;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{
+    width:30px;height:26px; position:relative; flex-shrink:0;
+    background:var(--accent);
+    clip-path: polygon(0 12%, 38% 12%, 46% 0, 100% 0, 100% 100%, 0 100%);
+  }
+  .brand h1{font-size:19px; margin:0; font-weight:600; letter-spacing:.2px;}
+  .icon-btn{
+    border:1px solid var(--line); background:var(--card); border-radius:9px;
+    width:36px;height:36px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--ink); flex-shrink:0;
+  }
+  .icon-btn:active{transform:scale(0.94);}
+  .header-actions{display:flex; gap:8px;}
+  .search-wrap{margin-top:10px; position:relative;}
+  .search-wrap input{
+    width:100%; padding:9px 12px 9px 34px; border-radius:9px; border:1px solid var(--line);
+    background:var(--card); font-size:14px; font-family:'Inter',sans-serif; color:var(--ink);
+  }
+  .search-wrap svg{position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:.5;}
+
+  .breadcrumb{
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    padding:12px 16px 4px; font-size:13px; color:var(--ink-soft);
+  }
+  .breadcrumb .crumb{cursor:pointer; padding:3px 6px; border-radius:6px;}
+  .breadcrumb .crumb:hover{background:var(--paper-dim);}
+  .breadcrumb .crumb.current{color:var(--ink); font-weight:600;}
+  .breadcrumb .sep{opacity:.4;}
+
+  main{padding:10px 16px 100px; max-width:760px; margin:0 auto;}
+
+  .section-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--ink-soft);
+    margin:18px 2px 8px; font-weight:600;
+  }
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px;}
+
+  .folder-card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 14px 12px; cursor:pointer; box-shadow:var(--shadow); position:relative;
+    display:flex; flex-direction:column; gap:8px; min-height:88px;
+  }
+  .folder-card:active{transform:scale(0.98);}
+  .tab-bar{height:6px; border-radius:4px; width:38px;}
+  .folder-card .fname{font-weight:600; font-size:14.5px; line-height:1.25;}
+  .folder-card .fmeta{font-size:11.5px; color:var(--ink-soft);}
+  .folder-card .more-dots{
+    position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:7px;
+    display:flex; align-items:center; justify-content:center; color:var(--ink-soft);
+  }
+  .folder-card .more-dots:active{background:var(--paper-dim);}
+
+  .doc-card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; cursor:pointer; box-shadow:var(--shadow);
+    display:flex; flex-direction:column;
+  }
+  .doc-card .thumb{
+    height:110px; background:var(--paper-dim); display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .doc-card .thumb img{width:100%; height:100%; object-fit:cover;}
+  .doc-card .doc-info{padding:9px 11px 11px;}
+  .doc-card .doc-name{font-size:13px; font-weight:600; line-height:1.25; margin-bottom:4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .badge{
+    display:inline-block; font-size:10.5px; padding:2px 8px; border-radius:20px;
+    background:var(--paper-dim); color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;
+  }
+  .doc-date{font-size:11px; color:var(--ink-soft); margin-top:4px;}
+
+  .empty-state{
+    text-align:center; padding:50px 20px; color:var(--ink-soft);
+  }
+  .empty-state .glyph{font-size:34px; margin-bottom:10px; opacity:.5;}
+  .empty-state p{font-size:14px; margin:4px 0;}
+
+  /* ---- FAB ---- */
+  .fab-wrap{position:fixed; bottom:22px; right:0; left:0; display:flex; justify-content:center; z-index:25; pointer-events:none;}
+  .fab-inner{max-width:760px; width:100%; display:flex; justify-content:flex-end; padding:0 20px; pointer-events:none;}
+  .fab{
+    pointer-events:all;
+    background:var(--accent); color:#fff; border:none; border-radius:16px;
+    padding:13px 20px; font-size:14.5px; font-weight:600; font-family:'Inter',sans-serif;
+    display:flex; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(181,84,42,0.35);
+    cursor:pointer;
+  }
+  .fab:active{transform:scale(0.96);}
+  .fab-secondary{
+    pointer-events:all; margin-right:10px;
+    background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:16px;
+    padding:13px 16px; font-size:14.5px; font-weight:600; font-family:'Inter',sans-serif;
+    box-shadow:var(--shadow); cursor:pointer;
+  }
+
+  /* ---- Modal ---- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(43,38,32,0.45); z-index:50;
+    display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none;
+    transition:opacity .18s ease;
+  }
+  .overlay.open{opacity:1; pointer-events:all;}
+  .sheet{
+    background:var(--paper); width:100%; max-width:520px; border-radius:20px 20px 0 0;
+    max-height:88vh; overflow-y:auto; padding:18px 18px 26px;
+    transform:translateY(24px); transition:transform .2s ease;
+  }
+  .overlay.open .sheet{transform:translateY(0);}
+  @media(min-width:600px){
+    .overlay{align-items:center;}
+    .sheet{border-radius:18px; margin-bottom:0;}
+  }
+  .sheet-handle{width:38px; height:4px; background:var(--line); border-radius:3px; margin:0 auto 14px;}
+  .sheet h2{font-size:19px; margin:0 0 14px; font-weight:600;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px;}
+  .field input[type=text], .field select, .field textarea{
+    width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--line);
+    background:var(--card); font-size:15px; font-family:'Inter',sans-serif; color:var(--ink);
+  }
+  .field textarea{resize:vertical; min-height:60px;}
+  .color-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .swatch{width:30px; height:30px; border-radius:8px; cursor:pointer; border:2px solid transparent;}
+  .swatch.selected{border-color:var(--ink);}
+  .btn-row{display:flex; gap:10px; margin-top:18px;}
+  .btn{
+    flex:1; padding:13px; border-radius:11px; border:none; font-size:14.5px; font-weight:600;
+    font-family:'Inter',sans-serif; cursor:pointer;
+  }
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-ghost{background:var(--card); color:var(--ink); border:1px solid var(--line);}
+  .btn-danger{background:var(--danger); color:#fff;}
+  .btn:disabled{opacity:.5;}
+
+  .upload-choice{display:flex; gap:10px; margin-bottom:16px;}
+  .upload-choice label{
+    flex:1; border:1.5px dashed var(--line); border-radius:12px; padding:20px 10px;
+    text-align:center; cursor:pointer; font-size:13px; font-weight:600; color:var(--ink-soft);
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .upload-choice input{display:none;}
+  .preview-box{
+    border-radius:12px; overflow:hidden; margin-bottom:14px; background:var(--paper-dim);
+    display:flex; align-items:center; justify-content:center; min-height:160px;
+  }
+  .preview-box img{width:100%; display:block;}
+  .type-add-row{display:flex; gap:8px; margin-top:8px;}
+  .type-add-row input{flex:1;}
+  .type-add-row button{
+    padding:0 14px; border-radius:9px; border:1px solid var(--line); background:var(--card);
+    font-weight:600; cursor:pointer; color:var(--ink);
+  }
+  .type-list{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+  .type-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-size:14px;
+  }
+  .type-row button{background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; font-weight:600;}
+
+  .kv{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .kv:last-child{border-bottom:none;}
+  .kv span:first-child{color:var(--ink-soft);}
+
+  .note-box{
+    margin-top:14px; background:var(--paper-dim); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px;
+  }
+  .note-box-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft);
+    font-weight:600; margin-bottom:6px;
+  }
+  .note-box-text{font-size:14px; line-height:1.5; white-space:pre-wrap;}
+  .note-box-empty{color:var(--ink-soft); font-style:italic;}
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:11px 18px; border-radius:10px; font-size:13.5px;
+    opacity:0; transition:all .25s ease; z-index:80; pointer-events:none; white-space:nowrap;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .install-hint{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    font-size:12.5px; color:var(--ink-soft); margin-top:16px; line-height:1.5;
+  }
+  .install-hint b{color:var(--ink);}
+  .search-results-path{font-size:11px; color:var(--ink-soft); margin-bottom:2px;}
+  .loading{text-align:center; padding:60px 20px; color:var(--ink-soft); font-size:14px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <h1>Arquivo da Família</h1>
+    </div>
+    <div class="header-actions">
+      <div class="icon-btn" onclick="openTypesModal()" title="Tipos de documento">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="10" x2="10" y2="20"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="searchInput" type="text" placeholder="Buscar documentos por nome, tipo ou pessoa..." oninput="onSearch(this.value)">
+  </div>
+</div>
+
+<div id="breadcrumb" class="breadcrumb"></div>
+
+<main id="main">
+  <div class="loading">Carregando arquivo...</div>
+</main>
+
+<div class="fab-wrap">
+  <div class="fab-inner">
+    <button class="fab-secondary" onclick="openFolderModal()">+ Pasta</button>
+    <button class="fab" onclick="openUploadModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+      Documento
+    </button>
+  </div>
+</div>
+
+<!-- Folder modal -->
+<div class="overlay" id="folderOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="folderModalTitle">Nova pasta</h2>
+    <div class="field">
+      <label>Nome da pasta</label>
+      <input type="text" id="folderNameInput" placeholder="Ex: Receituários">
+    </div>
+    <div class="field">
+      <label>Cor da aba</label>
+      <div class="color-row" id="colorRow"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal('folderOverlay')">Cancelar</button>
+      <button class="btn btn-primary" onclick="submitFolder()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload modal -->
+<div class="overlay" id="uploadOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Novo documento</h2>
+    <div id="uploadStep1">
+      <p style="font-size:13px;color:var(--ink-soft);margin-top:-8px;margin-bottom:14px;">Pasta: <b id="uploadTargetFolder" style="color:var(--ink);"></b></p>
+      <div class="upload-choice">
+        <label>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Tirar foto
+          <input type="file" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
+        </label>
+        <label>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Escolher arquivo
+          <input type="file" accept="image/*,application/pdf" onchange="handleFileSelect(event)">
+        </label>
+      </div>
+    </div>
+    <div id="uploadStep2" style="display:none;">
+      <div class="preview-box" id="previewBox"></div>
+      <div class="field">
+        <label>Nome do documento</label>
+        <input type="text" id="docNameInput" placeholder="Ex: Receituário - Dr. Souza">
+      </div>
+      <div class="field">
+        <label>Tipo de documento</label>
+        <select id="docTypeSelect"></select>
+      </div>
+      <div class="field">
+        <label>Observações (opcional)</label>
+        <textarea id="docNotesInput" placeholder="Ex: válido até dezembro"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="cancelUploadStep2()">Voltar</button>
+        <button class="btn btn-primary" id="saveDocBtn" onclick="submitDocument()">Salvar documento</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Preview modal -->
+<div class="overlay" id="previewOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="previewContent"></div>
+  </div>
+</div>
+
+<!-- Types modal -->
+<div class="overlay" id="typesOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Tipos de documento</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:-8px;">Este é o banco de tipos usado ao classificar documentos. Adicione novos conforme forem chegando.</p>
+    <div class="type-add-row">
+      <input type="text" id="newTypeInput" placeholder="Novo tipo de documento">
+      <button onclick="addDocType()">Adicionar</button>
+    </div>
+    <div class="type-list" id="typeList"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" style="flex:none; width:100%;" onclick="closeModal('typesOverlay')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- Data model ----------------
+   folders: [{id, name, parentId, color}]
+   docTypes: [string]
+   docs index: [{id, folderId, name, type, notes, mime, date}]
+   image data stored separately per doc under key docdata:<id>
+--------------------------------------------- */
+
+const PALETTE = ['#3B6E8F','#A6455B','#C98A2C','#4E7F5C','#8B5FA3','#5B6470','#B5542A','#2E7D8C'];
+const DEFAULT_FOLDERS = [
+  {id:'f_philippe', name:'Philippe', parentId:null, color:'#3B6E8F'},
+  {id:'f_renata', name:'Renata', parentId:null, color:'#A6455B'},
+  {id:'f_dante', name:'Dante', parentId:null, color:'#C98A2C'},
+  {id:'f_guido', name:'Guido', parentId:null, color:'#4E7F5C'},
+  {id:'f_gravidez', name:'Gravidez', parentId:null, color:'#8B5FA3'},
+];
+const DEFAULT_TYPES = [
+  'RG','CPF','Certidão de Nascimento','Cartão de Vacinação','Cartão do Convênio/Plano de Saúde',
+  'Receituário','Solicitação de Exame','Resultado de Exame','Atestado Médico',
+  'Comprovante de Residência','Boletim Escolar','Outro'
+];
+
+/* =====================================================================
+   INTEGRAÇÃO COM GOOGLE DRIVE
+   1. Implante o Code.gs (Apps Script) na conta do Google que vai guardar
+      os arquivos e copie a URL do Web App gerada.
+   2. Cole essa URL em SCRIPT_URL abaixo.
+   3. Cole a MESMA chave que você definiu em TOKEN dentro do Code.gs.
+   4. Abra este arquivo HTML como uma página normal (fora do Claude),
+      pois o preview do Claude bloqueia chamadas de rede externas.
+===================================================================== */
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6Ucs_eI77uh0a86pAi9cpYRvO7ta3WfeQ7-pBXpxLGjswSEzFCqR5ipY0vkPLJ_JU2w/exec';
+const TOKEN = '270908rp';
+
+async function apiCall(action, payload){
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(Object.assign({ action, token: TOKEN }, payload || {}))
+  });
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'Erro desconhecido do Drive.');
+  return data.result;
+}
+async function apiGet(params){
+  const qs = new URLSearchParams(Object.assign({ token: TOKEN }, params || {})).toString();
+  const res = await fetch(`${SCRIPT_URL}?${qs}`);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'Erro desconhecido do Drive.');
+  return data.result;
+}
+
+let state = {
+  folders: [],
+  docTypes: [],
+  docs: [],
+  currentFolderId: null,
+  pendingFileData: null,
+  pendingThumbData: null,
+  pendingFileMime: null,
+  pendingFolderIdForNew: null,
+  editingFolderId: null,
+  selectedColor: PALETTE[0],
+  searchMode: false,
+};
+
+async function loadData(){
+  try{
+    const result = await apiGet({ action: 'list' });
+    state.folders = (result.folders && result.folders.length) ? result.folders : DEFAULT_FOLDERS.slice();
+    state.docTypes = (result.docTypes && result.docTypes.length) ? result.docTypes : DEFAULT_TYPES.slice();
+    state.docs = result.docs || [];
+    if(!result.folders || !result.folders.length || !result.docTypes || !result.docTypes.length){
+      await saveAppData();
+    }
+  }catch(e){
+    showToast('Não foi possível conectar ao Google Drive. Verifique SCRIPT_URL e TOKEN.');
+    state.folders = DEFAULT_FOLDERS.slice();
+    state.docTypes = DEFAULT_TYPES.slice();
+    state.docs = [];
+  }
+  render();
+}
+
+async function saveAppData(){
+  try{
+    await apiCall('saveAppData', { folders: state.folders, docTypes: state.docTypes });
+  }catch(e){ showToast('Erro ao salvar no Drive. Tente novamente.'); }
+}
+async function saveDocsIndex(){
+  try{
+    await apiCall('saveDocsIndex', { docs: state.docs });
+  }catch(e){ showToast('Erro ao salvar no Drive. Tente novamente.'); }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+
+function getChildren(folderId){ return state.folders.filter(f=>f.parentId===folderId); }
+function getDocsIn(folderId){ return state.docs.filter(d=>d.folderId===folderId); }
+function getFolder(id){ return state.folders.find(f=>f.id===id); }
+function getPath(folderId){
+  const path=[]; let f = getFolder(folderId);
+  while(f){ path.unshift(f); f = f.parentId? getFolder(f.parentId): null; }
+  return path;
+}
+function countInside(folderId){
+  return getChildren(folderId).length + getDocsIn(folderId).length;
+}
+
+/* ---------------- Rendering ---------------- */
+function render(){
+  state.searchMode = false;
+  document.getElementById('searchInput').value='';
+  renderBreadcrumb();
+  renderMain();
+}
+
+function renderBreadcrumb(){
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML='';
+  const rootCrumb = document.createElement('span');
+  rootCrumb.className = 'crumb' + (state.currentFolderId===null?' current':'');
+  rootCrumb.textContent = 'Início';
+  rootCrumb.onclick = ()=>{ state.currentFolderId=null; render(); };
+  bc.appendChild(rootCrumb);
+
+  if(state.currentFolderId){
+    const path = getPath(state.currentFolderId);
+    path.forEach((f,i)=>{
+      const sep = document.createElement('span'); sep.className='sep'; sep.textContent='/';
+      bc.appendChild(sep);
+      const c = document.createElement('span');
+      c.className = 'crumb' + (i===path.length-1?' current':'');
+      c.textContent = f.name;
+      c.onclick = ()=>{ state.currentFolderId = f.id; render(); };
+      bc.appendChild(c);
+    });
+  }
+}
+
+function renderMain(){
+  const main = document.getElementById('main');
+  const children = getChildren(state.currentFolderId);
+  const docs = getDocsIn(state.currentFolderId);
+  let html = '';
+
+  if(children.length===0 && docs.length===0){
+    html += `<div class="empty-state">
+      <div class="glyph">🗂️</div>
+      <p><b>Nada por aqui ainda.</b></p>
+      <p>Crie uma subpasta ou adicione um documento com os botões abaixo.</p>
+    </div>`;
+  } else {
+    if(children.length){
+      html += `<div class="section-label">Pastas</div><div class="grid">`;
+      children.forEach(f=>{
+        const n = countInside(f.id);
+        html += `<div class="folder-card" onclick="enterFolder('${f.id}')">
+          <div class="tab-bar" style="background:${f.color}"></div>
+          <div class="fname">${escapeHtml(f.name)}</div>
+          <div class="fmeta">${n} ${n===1?'item':'itens'}</div>
+          <div class="more-dots" onclick="event.stopPropagation(); openFolderContextMenu('${f.id}')">⋯</div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    if(docs.length){
+      html += `<div class="section-label">Documentos</div><div class="grid">`;
+      docs.slice().sort((a,b)=> b.date.localeCompare(a.date)).forEach(d=>{
+        html += renderDocCard(d);
+      });
+      html += `</div>`;
+    }
+  }
+  main.innerHTML = html;
+}
+
+function renderDocCard(d){
+  const isImage = d.mime && d.mime.startsWith('image/');
+  const thumb = isImage
+    ? `<img src="__DATA_${d.id}__" loading="lazy">`
+    : `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8a8071" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+  const dateStr = new Date(d.date).toLocaleDateString('pt-BR');
+  return `<div class="doc-card" onclick="openPreview('${d.id}')">
+    <div class="thumb" data-doc-thumb="${d.id}">${isImage?'':thumb}</div>
+    <div class="doc-info">
+      <div class="doc-name">${escapeHtml(d.name)}</div>
+      <span class="badge">${escapeHtml(d.type)}</span>
+      <div class="doc-date mono">${dateStr}</div>
+    </div>
+  </div>`;
+}
+
+// Lazy-load thumbnails after render (avoid holding all images in state)
+async function hydrateThumbs(){
+  const nodes = document.querySelectorAll('[data-doc-thumb]');
+  for(const node of nodes){
+    const id = node.getAttribute('data-doc-thumb');
+    const d = state.docs.find(x=>x.id===id);
+    if(d && d.mime && d.mime.startsWith('image/') && d.thumb){
+      node.innerHTML = `<img src="${d.thumb}">`;
+    }
+  }
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function enterFolder(id){ state.currentFolderId = id; render(); afterRenderHook(); }
+
+async function afterRenderHook(){ await hydrateThumbs(); }
+
+/* ---------------- Search ---------------- */
+let searchTimer=null;
+function onSearch(q){
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=>doSearch(q), 150);
+}
+function doSearch(q){
+  q = q.trim().toLowerCase();
+  if(!q){ state.searchMode=false; renderMain(); afterRenderHook(); renderBreadcrumb(); return; }
+  state.searchMode = true;
+  const results = state.docs.filter(d=>
+    d.name.toLowerCase().includes(q) ||
+    d.type.toLowerCase().includes(q) ||
+    (d.notes||'').toLowerCase().includes(q) ||
+    getPath(d.folderId).some(f=>f.name.toLowerCase().includes(q))
+  );
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML = `<span class="crumb current">Resultados para "${escapeHtml(q)}"</span>`;
+  const main = document.getElementById('main');
+  if(results.length===0){
+    main.innerHTML = `<div class="empty-state"><div class="glyph">🔎</div><p>Nenhum documento encontrado.</p></div>`;
+    return;
+  }
+  let html = `<div class="grid">`;
+  results.forEach(d=>{
+    const pathStr = getPath(d.folderId).map(f=>f.name).join(' / ');
+    html += `<div>
+      <div class="search-results-path">${escapeHtml(pathStr)}</div>
+      ${renderDocCard(d)}
+    </div>`;
+  });
+  html += `</div>`;
+  main.innerHTML = html;
+  hydrateThumbs();
+}
+
+/* ---------------- Folder modal ---------------- */
+function openFolderModal(){
+  state.editingFolderId = null;
+  document.getElementById('folderModalTitle').textContent = 'Nova pasta';
+  document.getElementById('folderNameInput').value='';
+  state.selectedColor = PALETTE[Math.floor(Math.random()*PALETTE.length)];
+  buildColorRow();
+  openModal('folderOverlay');
+}
+function openRenameFolderModal(id){
+  const f = getFolder(id);
+  state.editingFolderId = id;
+  document.getElementById('folderModalTitle').textContent = 'Editar pasta';
+  document.getElementById('folderNameInput').value = f.name;
+  state.selectedColor = f.color;
+  buildColorRow();
+  openModal('folderOverlay');
+}
+function buildColorRow(){
+  const row = document.getElementById('colorRow');
+  row.innerHTML='';
+  PALETTE.forEach(c=>{
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (c===state.selectedColor?' selected':'');
+    sw.style.background = c;
+    sw.onclick = ()=>{ state.selectedColor = c; buildColorRow(); };
+    row.appendChild(sw);
+  });
+}
+async function submitFolder(){
+  const name = document.getElementById('folderNameInput').value.trim();
+  if(!name){ showToast('Dê um nome para a pasta.'); return; }
+  if(state.editingFolderId){
+    const f = getFolder(state.editingFolderId);
+    f.name = name; f.color = state.selectedColor;
+  } else {
+    state.folders.push({id: uid('f'), name, parentId: state.currentFolderId, color: state.selectedColor});
+  }
+  await saveAppData();
+  closeModal('folderOverlay');
+  render(); afterRenderHook();
+  showToast('Pasta salva.');
+}
+
+function openFolderContextMenu(id){
+  const f = getFolder(id);
+  const isDefault = DEFAULT_FOLDERS.some(d=>d.id===id);
+  const choice = prompt(
+    `"${f.name}"\n\nDigite:\n1 = Renomear/editar cor\n2 = Excluir pasta` + (isDefault? ' (pasta inicial)': ''),
+    '1'
+  );
+  if(choice==='1'){ openRenameFolderModal(id); }
+  else if(choice==='2'){ deleteFolder(id); }
+}
+async function deleteFolder(id){
+  const f = getFolder(id);
+  const n = countInside(id);
+  const ok = confirm(`Excluir "${f.name}"${n>0? ` e todo o conteúdo (${n} item(ns))`:''}? Esta ação não pode ser desfeita.`);
+  if(!ok) return;
+  // recursively collect folder ids to delete
+  const toDelete = [id];
+  let i=0;
+  while(i<toDelete.length){
+    getChildren(toDelete[i]).forEach(c=>toDelete.push(c.id));
+    i++;
+  }
+  state.docs = state.docs.filter(d=>!toDelete.includes(d.folderId));
+  state.folders = state.folders.filter(f=>!toDelete.includes(f.id));
+  if(toDelete.includes(state.currentFolderId)) state.currentFolderId = f.parentId || null;
+  await saveAppData();   // o Apps Script joga a pasta correspondente na lixeira do Drive (com tudo dentro)
+  await saveDocsIndex();
+  render(); afterRenderHook();
+  showToast('Pasta excluída do Drive.');
+}
+
+/* ---------------- Upload modal ---------------- */
+function openUploadModal(){
+  document.getElementById('uploadTargetFolder').textContent =
+    state.currentFolderId ? getPath(state.currentFolderId).map(f=>f.name).join(' / ') : 'Início';
+  document.getElementById('uploadStep1').style.display='block';
+  document.getElementById('uploadStep2').style.display='none';
+  openModal('uploadOverlay');
+}
+function cancelUploadStep2(){
+  document.getElementById('uploadStep1').style.display='block';
+  document.getElementById('uploadStep2').style.display='none';
+  state.pendingFileData = null;
+}
+async function handleFileSelect(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const isImage = file.type.startsWith('image/');
+  const isPdf = file.type === 'application/pdf';
+  if(!isImage && !isPdf){ showToast('Envie uma imagem ou um PDF.'); return; }
+
+  try{
+    if(isImage){
+      const imgs = await compressImage(file);
+      state.pendingFileData = imgs.full;
+      state.pendingThumbData = imgs.thumb;
+      state.pendingFileMime = 'image/jpeg';
+    } else {
+      if(file.size > 4.3*1024*1024){
+        showToast('PDF muito grande (máx ~4MB).');
+        return;
+      }
+      state.pendingFileData = await fileToDataUrl(file);
+      state.pendingThumbData = null;
+      state.pendingFileMime = 'application/pdf';
+    }
+  }catch(e){
+    showToast('Não foi possível processar o arquivo.');
+    return;
+  }
+
+  const previewBox = document.getElementById('previewBox');
+  if(isImage){
+    previewBox.innerHTML = `<img src="${state.pendingFileData}">`;
+  } else {
+    previewBox.innerHTML = `<div style="padding:30px;text-align:center;color:var(--ink-soft);">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <div style="margin-top:8px;font-size:13px;">${escapeHtml(file.name)}</div>
+    </div>`;
+  }
+  document.getElementById('docNameInput').value = file.name.replace(/\.[^.]+$/,'');
+  document.getElementById('docNotesInput').value='';
+  buildTypeSelect();
+  document.getElementById('uploadStep1').style.display='none';
+  document.getElementById('uploadStep2').style.display='block';
+  evt.target.value='';
+}
+function fileToDataUrl(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      function resized(maxDim, quality){
+        let w = img.width, h = img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>h){ h = Math.round(h*maxDim/w); w=maxDim; }
+          else { w = Math.round(w*maxDim/h); h=maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        return canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve({
+        full: resized(1600, 0.78),   // vai pro Google Drive
+        thumb: resized(260, 0.6)     // fica leve, junto do índice, pra abrir rápido
+      });
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+function buildTypeSelect(){
+  const sel = document.getElementById('docTypeSelect');
+  sel.innerHTML = state.docTypes.map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')
+    + `<option value="__new__">+ Adicionar novo tipo...</option>`;
+  sel.onchange = ()=>{
+    if(sel.value==='__new__'){
+      const nt = prompt('Nome do novo tipo de documento:');
+      if(nt && nt.trim()){
+        state.docTypes.push(nt.trim());
+        saveAppData();
+        buildTypeSelect();
+        sel.value = nt.trim();
+      } else {
+        sel.value = state.docTypes[0];
+      }
+    }
+  };
+}
+async function submitDocument(){
+  if(!state.pendingFileData){ showToast('Selecione um arquivo.'); return; }
+  const name = document.getElementById('docNameInput').value.trim() || 'Documento';
+  const type = document.getElementById('docTypeSelect').value;
+  const notes = document.getElementById('docNotesInput').value.trim();
+  const btn = document.getElementById('saveDocBtn');
+  btn.disabled = true; btn.textContent = 'Enviando para o Drive...';
+  try{
+    const doc = await apiCall('uploadDoc', {
+      folderId: state.currentFolderId,
+      name, type, notes,
+      mime: state.pendingFileMime,
+      fileBase64: state.pendingFileData,
+      thumb: state.pendingThumbData || null
+    });
+    state.docs.push(doc);
+    closeModal('uploadOverlay');
+    state.pendingFileData = null;
+    state.pendingThumbData = null;
+    render(); afterRenderHook();
+    showToast('Documento salvo no Google Drive.');
+  }catch(e){
+    showToast('Erro ao enviar para o Drive. Verifique a conexão.');
+  }
+  btn.disabled = false; btn.textContent = 'Salvar documento';
+}
+
+/* ---------------- Preview modal ---------------- */
+async function openPreview(id){
+  const d = state.docs.find(x=>x.id===id);
+  if(!d) return;
+  const content = document.getElementById('previewContent');
+  content.innerHTML = `<div class="loading">Carregando do Drive...</div>`;
+  openModal('previewOverlay');
+  let dataUrl = '';
+  try{
+    const result = await apiGet({ action: 'getFile', id });
+    dataUrl = result.dataUrl;
+  }catch(e){ showToast('Erro ao carregar arquivo do Drive.'); }
+
+  const pathStr = getPath(d.folderId).map(f=>f.name).join(' / ');
+  const sentDate = new Date(d.date);
+  const dateStr = sentDate.toLocaleDateString('pt-BR');
+  const timeStr = sentDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  const isImage = d.mime.startsWith('image/');
+
+  content.innerHTML = `
+    <h2 style="margin-bottom:10px;">${escapeHtml(d.name)}</h2>
+    <div class="preview-box">${isImage ? `<img src="${dataUrl}">` : `<div style="padding:40px;text-align:center;color:var(--ink-soft);">📄 PDF</div>`}</div>
+    <div class="kv"><span>Pasta</span><span>${escapeHtml(pathStr)}</span></div>
+    <div class="kv"><span>Tipo</span><span class="badge">${escapeHtml(d.type)}</span></div>
+    <div class="kv"><span>Enviado em</span><span>${dateStr} às ${timeStr}</span></div>
+    <div class="note-box">
+      <div class="note-box-label">Observação</div>
+      <div class="note-box-text">${d.notes ? escapeHtml(d.notes).replace(/\n/g,'<br>') : '<span class="note-box-empty">Nenhuma observação registrada.</span>'}</div>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-ghost" style="text-align:center; text-decoration:none;" href="${dataUrl}" download="${escapeHtml(d.name)}.${isImage?'jpg':'pdf'}">Baixar</a>
+      <button class="btn btn-danger" onclick="deleteDoc('${d.id}')">Excluir</button>
+    </div>
+  `;
+}
+async function deleteDoc(id){
+  const ok = confirm('Excluir este documento? Esta ação não pode ser desfeita.');
+  if(!ok) return;
+  state.docs = state.docs.filter(d=>d.id!==id);
+  await saveDocsIndex(); // o Apps Script joga o arquivo correspondente na lixeira do Drive
+  closeModal('previewOverlay');
+  render(); afterRenderHook();
+  showToast('Documento excluído do Drive.');
+}
+
+/* ---------------- Types modal ---------------- */
+function openTypesModal(){
+  renderTypeList();
+  openModal('typesOverlay');
+}
+function renderTypeList(){
+  const list = document.getElementById('typeList');
+  list.innerHTML = state.docTypes.map(t=>`
+    <div class="type-row">
+      <span>${escapeHtml(t)}</span>
+      <button onclick="removeDocType('${escapeHtml(t).replace(/'/g,"\\'")}')">Remover</button>
+    </div>
+  `).join('');
+}
+async function addDocType(){
+  const input = document.getElementById('newTypeInput');
+  const val = input.value.trim();
+  if(!val) return;
+  if(state.docTypes.includes(val)){ showToast('Esse tipo já existe.'); return; }
+  state.docTypes.push(val);
+  await saveAppData();
+  input.value='';
+  renderTypeList();
+}
+async function removeDocType(t){
+  state.docTypes = state.docTypes.filter(x=>x!==t);
+  await saveAppData();
+  renderTypeList();
+}
+
+/* ---------------- Modal helpers ---------------- */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('open'); });
+});
+
+/* ---------------- Init ---------------- */
+loadData().then(()=> afterRenderHook());
+</script>
+</body>
+</html>

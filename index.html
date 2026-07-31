@@ -237,10 +237,16 @@
 <div class="topbar">
   <div class="topbar-row">
     <div class="brand">
+      <div class="icon-btn" id="backBtn" onclick="goBack()" title="Voltar" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      </div>
       <div class="brand-mark"></div>
       <h1>Arquivo da Família</h1>
     </div>
     <div class="header-actions">
+      <div class="icon-btn" id="homeBtn" onclick="goHome()" title="Ir para o início">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
+      </div>
       <div class="icon-btn" onclick="openTypesModal()" title="Tipos de documento">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="10" x2="10" y2="20"/></svg>
       </div>
@@ -388,8 +394,8 @@ const DEFAULT_TYPES = [
    4. Abra este arquivo HTML como uma página normal (fora do Claude),
       pois o preview do Claude bloqueia chamadas de rede externas.
 ===================================================================== */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6Ucs_eI77uh0a86pAi9cpYRvO7ta3WfeQ7-pBXpxLGjswSEzFCqR5ipY0vkPLJ_JU2w/exec';
-const TOKEN = '270908rp';
+const SCRIPT_URL = 'COLE_AQUI_A_URL_DO_SEU_APPS_SCRIPT';
+const TOKEN = 'COLE_AQUI_A_MESMA_CHAVE_DO_CODE.GS';
 
 async function apiCall(action, payload){
   const res = await fetch(SCRIPT_URL, {
@@ -478,6 +484,7 @@ function render(){
   document.getElementById('searchInput').value='';
   renderBreadcrumb();
   renderMain();
+  document.getElementById('backBtn').style.display = state.currentFolderId===null ? 'none' : 'flex';
 }
 
 function renderBreadcrumb(){
@@ -573,6 +580,16 @@ function escapeHtml(s){
 }
 
 function enterFolder(id){ state.currentFolderId = id; render(); afterRenderHook(); }
+function goBack(){
+  if(state.currentFolderId===null) return;
+  const f = getFolder(state.currentFolderId);
+  state.currentFolderId = f ? (f.parentId || null) : null;
+  render(); afterRenderHook();
+}
+function goHome(){
+  state.currentFolderId = null;
+  render(); afterRenderHook();
+}
 
 async function afterRenderHook(){ await hydrateThumbs(); }
 

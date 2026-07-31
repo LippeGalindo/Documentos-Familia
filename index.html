@@ -394,8 +394,8 @@ const DEFAULT_TYPES = [
    4. Abra este arquivo HTML como uma página normal (fora do Claude),
       pois o preview do Claude bloqueia chamadas de rede externas.
 ===================================================================== */
-const SCRIPT_URL = 'COLE_AQUI_A_URL_DO_SEU_APPS_SCRIPT';
-const TOKEN = 'COLE_AQUI_A_MESMA_CHAVE_DO_CODE.GS';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6Ucs_eI77uh0a86pAi9cpYRvO7ta3WfeQ7-pBXpxLGjswSEzFCqR5ipY0vkPLJ_JU2w/exec';
+const TOKEN = '270908rp';
 
 async function apiCall(action, payload){
   const res = await fetch(SCRIPT_URL, {

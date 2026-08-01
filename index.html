@@ -187,6 +187,39 @@
     display:flex; align-items:center; justify-content:center; min-height:160px;
   }
   .preview-box img{width:100%; display:block;}
+
+  .files-grid{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+  .file-thumb{
+    position:relative; width:78px; height:78px; border-radius:10px; overflow:hidden;
+    background:var(--paper-dim); border:1px solid var(--line);
+  }
+  .file-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .file-thumb .file-pdf-icon{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft); flex-direction:column; gap:2px; font-size:9px; padding:4px; text-align:center;
+  }
+  .file-thumb .remove-btn{
+    position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%;
+    background:rgba(0,0,0,.6); color:#fff; border:none; display:flex; align-items:center;
+    justify-content:center; cursor:pointer; padding:0; line-height:1;
+  }
+  .file-thumb .page-num{
+    position:absolute; bottom:2px; left:2px; background:rgba(0,0,0,.55); color:#fff;
+    font-size:10px; padding:1px 5px; border-radius:6px;
+  }
+  .add-more-row{display:flex; gap:8px; margin-bottom:16px;}
+  .add-more-row label{
+    flex:1; border:1.5px dashed var(--line); border-radius:10px; padding:10px 6px;
+    text-align:center; cursor:pointer; font-size:12px; font-weight:600; color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .add-more-row input{display:none;}
+
+  .page-nav{display:flex; align-items:center; justify-content:center; gap:14px; margin:-6px 0 12px;}
+  .page-nav-btn{background:none; border:none; color:var(--accent, #B25B36); font-weight:600; font-size:13px; cursor:pointer; padding:4px 2px;}
+  .page-nav-btn:hover{text-decoration:underline;}
+  #pageIndicator{font-size:12.5px; color:var(--ink-soft); font-weight:600;}
+
   .type-add-row{display:flex; gap:8px; margin-top:8px;}
   .type-add-row input{flex:1;}
   .type-add-row button{
@@ -250,6 +283,9 @@
       <div class="icon-btn" onclick="openTypesModal()" title="Tipos de documento">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="10" x2="10" y2="20"/></svg>
       </div>
+      <div class="icon-btn" onclick="runRepairOrphans()" title="Reorganizar documentos soltos no Drive">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+      </div>
     </div>
   </div>
   <div class="search-wrap">
@@ -301,6 +337,7 @@
     <h2>Novo documento</h2>
     <div id="uploadStep1">
       <p style="font-size:13px;color:var(--ink-soft);margin-top:-8px;margin-bottom:14px;">Pasta: <b id="uploadTargetFolder" style="color:var(--ink);"></b></p>
+      <p style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;">Dica: para documentos com frente e verso ou várias páginas, escolha vários arquivos de uma vez — eles ficam juntos no mesmo documento.</p>
       <div class="upload-choice">
         <label>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -309,13 +346,25 @@
         </label>
         <label>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Escolher arquivo
-          <input type="file" accept="image/*,application/pdf" onchange="handleFileSelect(event)">
+          Escolher arquivo(s)
+          <input type="file" accept="image/*,application/pdf" multiple onchange="handleFileSelect(event)">
         </label>
       </div>
     </div>
     <div id="uploadStep2" style="display:none;">
-      <div class="preview-box" id="previewBox"></div>
+      <div class="files-grid" id="filesGrid"></div>
+      <div class="add-more-row">
+        <label>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          + Tirar outra foto
+          <input type="file" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
+        </label>
+        <label>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          + Adicionar mais
+          <input type="file" accept="image/*,application/pdf" multiple onchange="handleFileSelect(event)">
+        </label>
+      </div>
       <div class="field">
         <label>Nome do documento</label>
         <input type="text" id="docNameInput" placeholder="Ex: Receituário - Dr. Souza">
@@ -419,9 +468,9 @@ let state = {
   docTypes: [],
   docs: [],
   currentFolderId: null,
-  pendingFileData: null,
-  pendingThumbData: null,
-  pendingFileMime: null,
+  pendingFiles: [],
+  previewDocId: null,
+  previewPage: 0,
   pendingFolderIdForNew: null,
   editingFolderId: null,
   selectedColor: PALETTE[0],
@@ -431,11 +480,19 @@ let state = {
 async function loadData(){
   try{
     const result = await apiGet({ action: 'list' });
-    state.folders = (result.folders && result.folders.length) ? result.folders : DEFAULT_FOLDERS.slice();
-    state.docTypes = (result.docTypes && result.docTypes.length) ? result.docTypes : DEFAULT_TYPES.slice();
+    const hadFolders = result.folders && result.folders.length;
+    const hadTypes = result.docTypes && result.docTypes.length;
+    state.folders = hadFolders ? result.folders : DEFAULT_FOLDERS.slice();
+    state.docTypes = hadTypes ? result.docTypes : DEFAULT_TYPES.slice();
     state.docs = result.docs || [];
-    if(!result.folders || !result.folders.length || !result.docTypes || !result.docTypes.length){
-      await saveAppData();
+    if(!hadFolders){
+      // primeira vez: cria cada pasta padrão individualmente no Drive
+      for(const f of state.folders){
+        try{ await apiCall('upsertFolder', { folder: f }); }catch(e){}
+      }
+    }
+    if(!hadTypes){
+      try{ await apiCall('saveDocTypes', { docTypes: state.docTypes }); }catch(e){}
     }
   }catch(e){
     showToast('Não foi possível conectar ao Google Drive. Verifique SCRIPT_URL e TOKEN.');
@@ -446,15 +503,29 @@ async function loadData(){
   render();
 }
 
-async function saveAppData(){
+async function saveDocTypes(){
   try{
-    await apiCall('saveAppData', { folders: state.folders, docTypes: state.docTypes });
+    await apiCall('saveDocTypes', { docTypes: state.docTypes });
   }catch(e){ showToast('Erro ao salvar no Drive. Tente novamente.'); }
 }
-async function saveDocsIndex(){
+
+async function runRepairOrphans(){
+  const ok = confirm('Isso vai procurar documentos que ficaram soltos na pasta raiz do Drive (por causa de uma versão antiga com bug) e criar pastas de verdade pra eles, agrupados por tipo dentro de "Gravidez". Continuar?');
+  if(!ok) return;
+  showToast('Verificando e reorganizando...');
   try{
-    await apiCall('saveDocsIndex', { docs: state.docs });
-  }catch(e){ showToast('Erro ao salvar no Drive. Tente novamente.'); }
+    const result = await apiCall('repairOrphans', {});
+    if(result.fixed > 0){
+      state.folders = result.folders;
+      state.docs = result.docs;
+      render(); afterRenderHook();
+      showToast(`Pronto! ${result.fixed} documento(s) reorganizado(s).`);
+    } else {
+      showToast('Nenhum documento solto encontrado — está tudo certo.');
+    }
+  }catch(e){
+    showToast('Erro ao reorganizar. Tente novamente em instantes.');
+  }
 }
 
 function showToast(msg){
@@ -661,13 +732,18 @@ function buildColorRow(){
 async function submitFolder(){
   const name = document.getElementById('folderNameInput').value.trim();
   if(!name){ showToast('Dê um nome para a pasta.'); return; }
+  let folderObj;
   if(state.editingFolderId){
     const f = getFolder(state.editingFolderId);
     f.name = name; f.color = state.selectedColor;
+    folderObj = f;
   } else {
-    state.folders.push({id: uid('f'), name, parentId: state.currentFolderId, color: state.selectedColor});
+    folderObj = {id: uid('f'), name, parentId: state.currentFolderId, color: state.selectedColor};
+    state.folders.push(folderObj);
   }
-  await saveAppData();
+  try{
+    await apiCall('upsertFolder', { folder: folderObj });
+  }catch(e){ showToast('Erro ao salvar a pasta no Drive. Tente novamente.'); }
   closeModal('folderOverlay');
   render(); afterRenderHook();
   showToast('Pasta salva.');
@@ -698,14 +774,16 @@ async function deleteFolder(id){
   state.docs = state.docs.filter(d=>!toDelete.includes(d.folderId));
   state.folders = state.folders.filter(f=>!toDelete.includes(f.id));
   if(toDelete.includes(state.currentFolderId)) state.currentFolderId = f.parentId || null;
-  await saveAppData();   // o Apps Script joga a pasta correspondente na lixeira do Drive (com tudo dentro)
-  await saveDocsIndex();
+  try{
+    await apiCall('deleteFolders', { ids: toDelete }); // o Apps Script joga só essas pastas na lixeira do Drive
+  }catch(e){ showToast('Erro ao excluir no Drive. Tente novamente.'); }
   render(); afterRenderHook();
   showToast('Pasta excluída do Drive.');
 }
 
 /* ---------------- Upload modal ---------------- */
 function openUploadModal(){
+  state.pendingFiles = [];
   document.getElementById('uploadTargetFolder').textContent =
     state.currentFolderId ? getPath(state.currentFolderId).map(f=>f.name).join(' / ') : 'Início';
   document.getElementById('uploadStep1').style.display='block';
@@ -715,50 +793,65 @@ function openUploadModal(){
 function cancelUploadStep2(){
   document.getElementById('uploadStep1').style.display='block';
   document.getElementById('uploadStep2').style.display='none';
-  state.pendingFileData = null;
+  state.pendingFiles = [];
 }
 async function handleFileSelect(evt){
-  const file = evt.target.files[0];
-  if(!file) return;
-  const isImage = file.type.startsWith('image/');
-  const isPdf = file.type === 'application/pdf';
-  if(!isImage && !isPdf){ showToast('Envie uma imagem ou um PDF.'); return; }
+  const files = Array.from(evt.target.files || []);
+  if(!files.length) return;
+  const isFirstBatch = state.pendingFiles.length === 0;
 
-  try{
-    if(isImage){
-      const imgs = await compressImage(file);
-      state.pendingFileData = imgs.full;
-      state.pendingThumbData = imgs.thumb;
-      state.pendingFileMime = 'image/jpeg';
-    } else {
-      if(file.size > 4.3*1024*1024){
-        showToast('PDF muito grande (máx ~4MB).');
-        return;
+  for(const file of files){
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if(!isImage && !isPdf){ showToast(`"${file.name}" não é imagem nem PDF — ignorado.`); continue; }
+    try{
+      if(isImage){
+        const imgs = await compressImage(file);
+        state.pendingFiles.push({ full: imgs.full, thumb: imgs.thumb, mime: 'image/jpeg', name: file.name });
+      } else {
+        if(file.size > 4.3*1024*1024){
+          showToast(`"${file.name}" é muito grande (máx ~4MB) — ignorado.`);
+          continue;
+        }
+        const dataUrl = await fileToDataUrl(file);
+        state.pendingFiles.push({ full: dataUrl, thumb: null, mime: 'application/pdf', name: file.name });
       }
-      state.pendingFileData = await fileToDataUrl(file);
-      state.pendingThumbData = null;
-      state.pendingFileMime = 'application/pdf';
+    }catch(e){
+      showToast(`Não foi possível processar "${file.name}".`);
     }
-  }catch(e){
-    showToast('Não foi possível processar o arquivo.');
-    return;
   }
 
-  const previewBox = document.getElementById('previewBox');
-  if(isImage){
-    previewBox.innerHTML = `<img src="${state.pendingFileData}">`;
-  } else {
-    previewBox.innerHTML = `<div style="padding:30px;text-align:center;color:var(--ink-soft);">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <div style="margin-top:8px;font-size:13px;">${escapeHtml(file.name)}</div>
-    </div>`;
+  if(!state.pendingFiles.length){ evt.target.value=''; return; }
+
+  renderFilesGrid();
+  if(isFirstBatch){
+    document.getElementById('docNameInput').value = state.pendingFiles[0].name.replace(/\.[^.]+$/,'');
+    document.getElementById('docNotesInput').value='';
+    buildTypeSelect();
+    document.getElementById('uploadStep1').style.display='none';
+    document.getElementById('uploadStep2').style.display='block';
   }
-  document.getElementById('docNameInput').value = file.name.replace(/\.[^.]+$/,'');
-  document.getElementById('docNotesInput').value='';
-  buildTypeSelect();
-  document.getElementById('uploadStep1').style.display='none';
-  document.getElementById('uploadStep2').style.display='block';
   evt.target.value='';
+}
+function renderFilesGrid(){
+  const grid = document.getElementById('filesGrid');
+  grid.innerHTML = state.pendingFiles.map((f, i)=>{
+    const inner = f.mime.startsWith('image/')
+      ? `<img src="${f.thumb || f.full}">`
+      : `<div class="file-pdf-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF</div>`;
+    const pageBadge = state.pendingFiles.length > 1 ? `<span class="page-num">${i+1}</span>` : '';
+    return `<div class="file-thumb">${inner}${pageBadge}
+      <button class="remove-btn" onclick="removePendingFile(${i})" title="Remover">✕</button>
+    </div>`;
+  }).join('');
+}
+function removePendingFile(i){
+  state.pendingFiles.splice(i, 1);
+  if(!state.pendingFiles.length){
+    cancelUploadStep2();
+  } else {
+    renderFilesGrid();
+  }
 }
 function fileToDataUrl(file){
   return new Promise((res,rej)=>{
@@ -804,7 +897,7 @@ function buildTypeSelect(){
       const nt = prompt('Nome do novo tipo de documento:');
       if(nt && nt.trim()){
         state.docTypes.push(nt.trim());
-        saveAppData();
+        saveDocTypes();
         buildTypeSelect();
         sel.value = nt.trim();
       } else {
@@ -814,26 +907,26 @@ function buildTypeSelect(){
   };
 }
 async function submitDocument(){
-  if(!state.pendingFileData){ showToast('Selecione um arquivo.'); return; }
+  if(!state.pendingFiles.length){ showToast('Selecione ao menos um arquivo.'); return; }
   const name = document.getElementById('docNameInput').value.trim() || 'Documento';
   const type = document.getElementById('docTypeSelect').value;
   const notes = document.getElementById('docNotesInput').value.trim();
   const btn = document.getElementById('saveDocBtn');
-  btn.disabled = true; btn.textContent = 'Enviando para o Drive...';
+  const total = state.pendingFiles.length;
+  btn.disabled = true;
+  btn.textContent = total > 1 ? `Enviando ${total} arquivos...` : 'Enviando para o Drive...';
   try{
     const doc = await apiCall('uploadDoc', {
       folderId: state.currentFolderId,
       name, type, notes,
-      mime: state.pendingFileMime,
-      fileBase64: state.pendingFileData,
-      thumb: state.pendingThumbData || null
+      files: state.pendingFiles.map(f => ({ fileBase64: f.full, mime: f.mime })),
+      thumb: (state.pendingFiles.find(f => f.thumb) || {}).thumb || null
     });
     state.docs.push(doc);
     closeModal('uploadOverlay');
-    state.pendingFileData = null;
-    state.pendingThumbData = null;
+    state.pendingFiles = [];
     render(); afterRenderHook();
-    showToast('Documento salvo no Google Drive.');
+    showToast(total > 1 ? `${total} arquivos salvos no mesmo documento.` : 'Documento salvo no Google Drive.');
   }catch(e){
     showToast('Erro ao enviar para o Drive. Verifique a conexão.');
   }
@@ -844,24 +937,25 @@ async function submitDocument(){
 async function openPreview(id){
   const d = state.docs.find(x=>x.id===id);
   if(!d) return;
-  const content = document.getElementById('previewContent');
-  content.innerHTML = `<div class="loading">Carregando do Drive...</div>`;
-  openModal('previewOverlay');
-  let dataUrl = '';
-  try{
-    const result = await apiGet({ action: 'getFile', id });
-    dataUrl = result.dataUrl;
-  }catch(e){ showToast('Erro ao carregar arquivo do Drive.'); }
+  state.previewDocId = id;
+  state.previewPage = 0;
 
   const pathStr = getPath(d.folderId).map(f=>f.name).join(' / ');
   const sentDate = new Date(d.date);
   const dateStr = sentDate.toLocaleDateString('pt-BR');
   const timeStr = sentDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-  const isImage = d.mime.startsWith('image/');
+  const pageCount = (d.files && d.files.length) ? d.files.length : 1;
 
+  const content = document.getElementById('previewContent');
   content.innerHTML = `
     <h2 style="margin-bottom:10px;">${escapeHtml(d.name)}</h2>
-    <div class="preview-box">${isImage ? `<img src="${dataUrl}">` : `<div style="padding:40px;text-align:center;color:var(--ink-soft);">📄 PDF</div>`}</div>
+    <div class="preview-box" id="previewFileBox"><div class="loading">Carregando do Drive...</div></div>
+    ${pageCount > 1 ? `
+    <div class="page-nav">
+      <button class="page-nav-btn" onclick="changePreviewPage(-1)">‹ Anterior</button>
+      <span id="pageIndicator">1 / ${pageCount}</span>
+      <button class="page-nav-btn" onclick="changePreviewPage(1)">Próxima ›</button>
+    </div>` : ''}
     <div class="kv"><span>Pasta</span><span>${escapeHtml(pathStr)}</span></div>
     <div class="kv"><span>Tipo</span><span class="badge">${escapeHtml(d.type)}</span></div>
     <div class="kv"><span>Enviado em</span><span>${dateStr} às ${timeStr}</span></div>
@@ -869,17 +963,51 @@ async function openPreview(id){
       <div class="note-box-label">Observação</div>
       <div class="note-box-text">${d.notes ? escapeHtml(d.notes).replace(/\n/g,'<br>') : '<span class="note-box-empty">Nenhuma observação registrada.</span>'}</div>
     </div>
-    <div class="btn-row">
-      <a class="btn btn-ghost" style="text-align:center; text-decoration:none;" href="${dataUrl}" download="${escapeHtml(d.name)}.${isImage?'jpg':'pdf'}">Baixar</a>
-      <button class="btn btn-danger" onclick="deleteDoc('${d.id}')">Excluir</button>
-    </div>
+    <div class="btn-row" id="previewActions"></div>
+  `;
+  openModal('previewOverlay');
+  await loadPreviewPage();
+}
+async function changePreviewPage(delta){
+  const d = state.docs.find(x=>x.id===state.previewDocId);
+  if(!d) return;
+  const pageCount = (d.files && d.files.length) ? d.files.length : 1;
+  state.previewPage = Math.max(0, Math.min(pageCount - 1, state.previewPage + delta));
+  await loadPreviewPage();
+}
+async function loadPreviewPage(){
+  const d = state.docs.find(x=>x.id===state.previewDocId);
+  if(!d) return;
+  const box = document.getElementById('previewFileBox');
+  box.innerHTML = `<div class="loading">Carregando do Drive...</div>`;
+  let dataUrl = '', mime = d.mime || '';
+  try{
+    const result = await apiGet({ action: 'getFile', id: d.id, index: state.previewPage });
+    dataUrl = result.dataUrl;
+    mime = result.mime || mime;
+  }catch(e){ showToast('Erro ao carregar arquivo do Drive.'); }
+
+  const isImage = mime.startsWith('image/');
+  box.innerHTML = isImage ? `<img src="${dataUrl}">` : `<div style="padding:40px;text-align:center;color:var(--ink-soft);">📄 PDF</div>`;
+
+  const pageCount = (d.files && d.files.length) ? d.files.length : 1;
+  const indicator = document.getElementById('pageIndicator');
+  if(indicator) indicator.textContent = `${state.previewPage + 1} / ${pageCount}`;
+
+  const ext = isImage ? 'jpg' : 'pdf';
+  const suffix = pageCount > 1 ? `-${state.previewPage + 1}` : '';
+  document.getElementById('previewActions').innerHTML = `
+    <a class="btn btn-ghost" style="text-align:center; text-decoration:none;" href="${dataUrl}" download="${escapeHtml(d.name)}${suffix}.${ext}">Baixar${pageCount > 1 ? ' esta página' : ''}</a>
+    <button class="btn btn-danger" onclick="deleteDoc('${d.id}')">Excluir documento</button>
   `;
 }
 async function deleteDoc(id){
-  const ok = confirm('Excluir este documento? Esta ação não pode ser desfeita.');
+  const ok = confirm('Excluir este documento? Todas as páginas/arquivos dele serão apagados. Esta ação não pode ser desfeita.');
   if(!ok) return;
   state.docs = state.docs.filter(d=>d.id!==id);
-  await saveDocsIndex(); // o Apps Script joga o arquivo correspondente na lixeira do Drive
+  try{
+    await apiCall('deleteDoc', { id }); // o Apps Script joga o(s) arquivo(s) correspondente(s) na lixeira do Drive
+  }catch(e){ showToast('Erro ao excluir no Drive. Tente novamente.'); }
   closeModal('previewOverlay');
   render(); afterRenderHook();
   showToast('Documento excluído do Drive.');
@@ -905,13 +1033,13 @@ async function addDocType(){
   if(!val) return;
   if(state.docTypes.includes(val)){ showToast('Esse tipo já existe.'); return; }
   state.docTypes.push(val);
-  await saveAppData();
+  await saveDocTypes();
   input.value='';
   renderTypeList();
 }
 async function removeDocType(t){
   state.docTypes = state.docTypes.filter(x=>x!==t);
-  await saveAppData();
+  await saveDocTypes();
   renderTypeList();
 }
 

@@ -471,6 +471,9 @@ let state = {
   pendingFiles: [],
   previewDocId: null,
   previewPage: 0,
+  previewCurrentUrl: null,
+  previewCurrentMime: null,
+  previewCurrentFilename: null,
   pendingFolderIdForNew: null,
   editingFolderId: null,
   selectedColor: PALETTE[0],
@@ -996,10 +999,55 @@ async function loadPreviewPage(){
 
   const ext = isImage ? 'jpg' : 'pdf';
   const suffix = pageCount > 1 ? `-${state.previewPage + 1}` : '';
+  state.previewCurrentUrl = dataUrl;
+  state.previewCurrentMime = mime;
+  state.previewCurrentFilename = `${d.name}${suffix}.${ext}`;
+
   document.getElementById('previewActions').innerHTML = `
-    <a class="btn btn-ghost" style="text-align:center; text-decoration:none;" href="${dataUrl}" download="${escapeHtml(d.name)}${suffix}.${ext}">Baixar${pageCount > 1 ? ' esta página' : ''}</a>
+    <button class="btn btn-ghost" onclick="downloadCurrentFile()">Baixar${pageCount > 1 ? ' esta página' : ''}</button>
     <button class="btn btn-danger" onclick="deleteDoc('${d.id}')">Excluir documento</button>
   `;
+}
+async function downloadCurrentFile(){
+  const dataUrl = state.previewCurrentUrl;
+  const mime = state.previewCurrentMime;
+  const filename = state.previewCurrentFilename || 'documento';
+  if(!dataUrl){ showToast('Nada pra baixar ainda, aguarde carregar.'); return; }
+
+  // No celular, um <a download> com data: URL costuma "piscar" e não salvar nada
+  // (principalmente no Safari/iPhone). Por isso convertemos pra Blob e, quando
+  // disponível, abrimos a folha nativa de compartilhar/salvar do aparelho.
+  let blob;
+  try{
+    blob = await (await fetch(dataUrl)).blob();
+  }catch(e){
+    showToast('Não foi possível preparar o arquivo pra download.');
+    return;
+  }
+
+  try{
+    const file = new File([blob], filename, { type: mime });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: filename });
+      return;
+    }
+  }catch(e){
+    // usuário cancelou o compartilhamento, ou o navegador recusou — tenta o fallback abaixo
+  }
+
+  try{
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(blobUrl), 30000);
+    showToast('Download iniciado.');
+  }catch(e){
+    showToast('Não foi possível baixar automaticamente. Toque e segure a imagem pra salvar.');
+  }
 }
 async function deleteDoc(id){
   const ok = confirm('Excluir este documento? Todas as páginas/arquivos dele serão apagados. Esta ação não pode ser desfeita.');

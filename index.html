@@ -14,6 +14,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Arquivo">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -322,6 +325,13 @@
   .entry-row .entry-del{
     background:none; border:none; color:var(--danger); cursor:pointer; padding:4px; flex-shrink:0;
   }
+  .control-toolbar{display:flex; justify-content:flex-end; margin-bottom:12px;}
+  .btn-chip-action{
+    display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--line);
+    color:var(--ink); font-weight:600; font-size:12.5px; padding:8px 12px; border-radius:10px; cursor:pointer;
+  }
+  .btn-chip-action:active{transform:scale(0.97);}
+  .entry-row{cursor:pointer;}
 </style>
 </head>
 <body>
@@ -498,7 +508,7 @@
 <div class="overlay" id="controlEntryOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <h2>Novo registro</h2>
+    <h2 id="controlEntryModalTitle">Novo registro</h2>
     <p id="controlEntryTypeLabel" style="font-size:13px;color:var(--ink-soft);margin-top:-8px;margin-bottom:14px;"></p>
     <div class="field">
       <label>Data e horário</label>
@@ -594,6 +604,7 @@ let state = {
   currentControlTypeId: null,
   editingControlTypeId: null,
   selectedControlColor: PALETTE[0],
+  editingControlEntryId: null,
 };
 
 async function loadData(){
@@ -888,21 +899,30 @@ function renderControlsMain(){
     }
   } else {
     const entries = getEntriesFor(state.currentControlTypeId);
+    const t = getControlType(state.currentControlTypeId);
+    if(entries.length > 0){
+      html += `<div class="control-toolbar">
+        <button class="btn-chip-action" onclick="downloadControlPdf('${state.currentControlTypeId}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Baixar PDF
+        </button>
+      </div>`;
+    }
     if(entries.length === 0){
-      html = `<div class="empty-state">
+      html += `<div class="empty-state">
         <div class="glyph">📊</div>
         <p><b>Nenhum registro ainda.</b></p>
         <p>Adicione o primeiro registro com o botão abaixo.</p>
       </div>`;
     } else {
       entries.forEach(e=>{
-        html += `<div class="entry-row">
+        html += `<div class="entry-row" onclick="openControlEntryModal('${e.id}')">
           <div class="entry-main">
             <div class="entry-result">${escapeHtml(e.result)}</div>
             <div class="entry-date mono">${formatDateTime(e.datetime)}</div>
             ${e.notes ? `<div class="entry-notes">${escapeHtml(e.notes)}</div>` : ''}
           </div>
-          <button class="entry-del" onclick="deleteControlEntry('${e.id}')" title="Excluir registro">
+          <button class="entry-del" onclick="event.stopPropagation(); deleteControlEntry('${e.id}')" title="Excluir registro">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
         </div>`;
@@ -993,13 +1013,19 @@ function toLocalDatetimeInputValue(date){
   const pad = n=>String(n).padStart(2,'0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-function openControlEntryModal(){
+function openControlEntryModal(entryId){
   if(!state.currentControlTypeId) return;
   const t = getControlType(state.currentControlTypeId);
   document.getElementById('controlEntryTypeLabel').textContent = `Controle: ${t.name}`;
-  document.getElementById('controlDatetimeInput').value = toLocalDatetimeInputValue(new Date());
-  document.getElementById('controlResultInput').value = '';
-  document.getElementById('controlNotesInput').value = '';
+
+  const editing = entryId ? state.controlEntries.find(e=>e.id===entryId) : null;
+  state.editingControlEntryId = editing ? editing.id : null;
+  document.getElementById('controlEntryModalTitle') && (document.getElementById('controlEntryModalTitle').textContent = editing ? 'Editar registro' : 'Novo registro');
+
+  document.getElementById('controlDatetimeInput').value = editing ? toLocalDatetimeInputValue(new Date(editing.datetime)) : toLocalDatetimeInputValue(new Date());
+  document.getElementById('controlResultInput').value = editing ? editing.result : '';
+  document.getElementById('controlNotesInput').value = editing ? editing.notes : '';
+  document.getElementById('saveControlEntryBtn').textContent = editing ? 'Salvar alterações' : 'Salvar registro';
   openModal('controlEntryOverlay');
 }
 async function submitControlEntry(){
@@ -1009,19 +1035,27 @@ async function submitControlEntry(){
   const datetime = localValue ? new Date(localValue).toISOString() : new Date().toISOString();
   const notes = document.getElementById('controlNotesInput').value.trim();
   const btn = document.getElementById('saveControlEntryBtn');
+  const editingId = state.editingControlEntryId;
   btn.disabled = true; btn.textContent = 'Salvando...';
   try{
-    const entry = await apiCall('addControlEntry', {
-      typeId: state.currentControlTypeId, datetime, result, notes
-    });
-    state.controlEntries.push(entry);
+    if(editingId){
+      const entry = await apiCall('updateControlEntry', { id: editingId, datetime, result, notes });
+      const i = state.controlEntries.findIndex(e=>e.id===editingId);
+      if(i>-1) state.controlEntries[i] = entry;
+    } else {
+      const entry = await apiCall('addControlEntry', {
+        typeId: state.currentControlTypeId, datetime, result, notes
+      });
+      state.controlEntries.push(entry);
+    }
     closeModal('controlEntryOverlay');
+    state.editingControlEntryId = null;
     render(); afterRenderHook();
-    showToast('Registro salvo.');
+    showToast(editingId ? 'Registro atualizado.' : 'Registro salvo.');
   }catch(e){
     showToast('Erro ao salvar o registro. Tente novamente.');
   }
-  btn.disabled = false; btn.textContent = 'Salvar registro';
+  btn.disabled = false;
 }
 async function deleteControlEntry(id){
   const ok = confirm('Excluir este registro? Esta ação não pode ser desfeita.');
@@ -1032,6 +1066,87 @@ async function deleteControlEntry(id){
   }catch(e){ showToast('Erro ao excluir. Tente novamente.'); }
   render(); afterRenderHook();
   showToast('Registro excluído.');
+}
+
+/* ---------------- Exportar controle em PDF ---------------- */
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+async function downloadControlPdf(typeId){
+  const t = getControlType(typeId);
+  const entries = getEntriesFor(typeId).slice().sort((a,b)=> a.datetime.localeCompare(b.datetime)); // cronológico
+  if(!entries.length){ showToast('Não há registros pra exportar.'); return; }
+
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    showToast('Não foi possível carregar o gerador de PDF. Verifique sua internet e tente de novo.');
+    return;
+  }
+
+  // Agrupa por dia (data local) e separa cada registro em manhã / tarde / noite
+  const byDate = {}; // dateKey -> { manha:[], tarde:[], noite:[], notes:[] }
+  entries.forEach(e=>{
+    const d = new Date(e.datetime);
+    const dateKey = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    const timeLabel = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    if(!byDate[dateKey]) byDate[dateKey] = { date:d, manha:[], tarde:[], noite:[], notes:[] };
+    const bucket = byDate[dateKey];
+    const line = `${e.result} (${timeLabel})`;
+    const hour = d.getHours();
+    if(hour < 12) bucket.manha.push(line);
+    else if(hour < 18) bucket.tarde.push(line);
+    else bucket.noite.push(line);
+    if(e.notes) bucket.notes.push(entries.length>1 ? `${timeLabel}: ${e.notes}` : e.notes);
+  });
+
+  const rows = Object.keys(byDate).sort().map(key=>{
+    const b = byDate[key];
+    const dateLabel = b.date.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+    return [
+      dateLabel,
+      b.manha.join('\n') || '—',
+      b.tarde.join('\n') || '—',
+      b.noite.join('\n') || '—',
+      b.notes.join('\n') || ''
+    ];
+  });
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Cabeçalho: nome do controle
+  doc.setFillColor(20, 33, 56);
+  doc.rect(0, 0, pageWidth, 70, 'F');
+  doc.setTextColor(216, 179, 74);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.text(t.name, 40, 34);
+  doc.setTextColor(230, 230, 230);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  doc.text('Arquivo da Família — Controle de saúde', 40, 52);
+  const generatedStr = 'Gerado em ' + new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  doc.text(generatedStr, 40, 64);
+
+  doc.autoTable({
+    startY: 90,
+    head: [['Data', 'Manhã', 'Tarde', 'Noite', 'Observação']],
+    body: rows,
+    styles: { font:'helvetica', fontSize: 9, cellPadding: 6, valign: 'top', overflow: 'linebreak' },
+    headStyles: { fillColor: [30, 58, 115], textColor: [255,255,255], fontStyle:'bold' },
+    alternateRowStyles: { fillColor: [245, 242, 232] },
+    columnStyles: {
+      0: { cellWidth: 78, fontStyle:'bold' },
+      1: { cellWidth: 90 },
+      2: { cellWidth: 90 },
+      3: { cellWidth: 90 },
+      4: { cellWidth: 'auto' }
+    },
+    margin: { left: 40, right: 40 },
+  });
+
+  const blob = doc.output('blob');
+  const filename = `Controle - ${t.name}.pdf`;
+  await shareOrDownloadBlob(blob, filename, 'application/pdf');
 }
 
 /* ---------------- Search ---------------- */
@@ -1375,6 +1490,33 @@ async function loadPreviewPage(){
     <button class="btn btn-danger" onclick="deleteDoc('${d.id}')">Excluir documento</button>
   `;
 }
+// Compartilha/baixa um Blob de forma confiável em celular (usa a folha nativa
+// de compartilhar quando disponível, com fallback pra download direto).
+async function shareOrDownloadBlob(blob, filename, mime){
+  try{
+    const file = new File([blob], filename, { type: mime });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: filename });
+      return;
+    }
+  }catch(e){
+    // usuário cancelou o compartilhamento, ou o navegador recusou — tenta o fallback abaixo
+  }
+  try{
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(blobUrl), 30000);
+    showToast('Download iniciado.');
+  }catch(e){
+    showToast('Não foi possível baixar automaticamente. Toque e segure pra salvar.');
+  }
+}
+
 async function downloadCurrentFile(){
   const dataUrl = state.previewCurrentUrl;
   const mime = state.previewCurrentMime;
@@ -1391,30 +1533,7 @@ async function downloadCurrentFile(){
     showToast('Não foi possível preparar o arquivo pra download.');
     return;
   }
-
-  try{
-    const file = new File([blob], filename, { type: mime });
-    if(navigator.canShare && navigator.canShare({ files: [file] })){
-      await navigator.share({ files: [file], title: filename });
-      return;
-    }
-  }catch(e){
-    // usuário cancelou o compartilhamento, ou o navegador recusou — tenta o fallback abaixo
-  }
-
-  try{
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(blobUrl), 30000);
-    showToast('Download iniciado.');
-  }catch(e){
-    showToast('Não foi possível baixar automaticamente. Toque e segure a imagem pra salvar.');
-  }
+  await shareOrDownloadBlob(blob, filename, mime);
 }
 async function deleteDoc(id){
   const ok = confirm('Excluir este documento? Todas as páginas/arquivos dele serão apagados. Esta ação não pode ser desfeita.');

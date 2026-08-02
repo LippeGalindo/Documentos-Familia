@@ -4,20 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Arquivo da Família</title>
+
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1A2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arquivo">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#FAF6EE;
-    --paper-dim:#F1EADA;
-    --ink:#2B2620;
-    --ink-soft:#6B6255;
-    --card:#FFFFFF;
-    --line:#E5DCC6;
-    --accent:#B5542A;
-    --ok:#3F7A52;
-    --danger:#A6455B;
-    --shadow: 0 1px 2px rgba(43,38,32,0.06), 0 6px 18px rgba(43,38,32,0.06);
+    --paper:#0D1729;
+    --paper-dim:#16223E;
+    --ink:#F2EDDC;
+    --ink-soft:#93A0C4;
+    --card:#192A4E;
+    --line:#2B3C64;
+    --accent:#D8B34A;
+    --accent-ink:#12203C;
+    --gold:#D8B34A;
+    --emerald:#2FAF7A;
+    --royal:#3E63C7;
+    --ok:#2FAF7A;
+    --danger:#E0728A;
+    --shadow: 0 10px 28px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.28);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -34,18 +48,23 @@
   /* ---- Header ---- */
   .topbar{
     position:sticky; top:0; z-index:20;
-    background:var(--paper);
+    background:rgba(13,23,41,0.86);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     border-bottom:1px solid var(--line);
     padding:14px 16px 10px;
+  }
+  .topbar::after{
+    content:''; display:block; position:absolute; left:0; right:0; bottom:-1px; height:3px;
+    background:linear-gradient(90deg, var(--gold), var(--emerald), var(--royal));
   }
   .topbar-row{display:flex; align-items:center; gap:10px; justify-content:space-between;}
   .brand{display:flex; align-items:center; gap:10px;}
   .brand-mark{
-    width:30px;height:26px; position:relative; flex-shrink:0;
-    background:var(--accent);
-    clip-path: polygon(0 12%, 38% 12%, 46% 0, 100% 0, 100% 100%, 0 100%);
+    width:34px;height:34px; position:relative; flex-shrink:0;
+    border-radius:8px; overflow:hidden; box-shadow:0 0 0 1.5px var(--gold);
   }
-  .brand h1{font-size:19px; margin:0; font-weight:600; letter-spacing:.2px;}
+  .brand-mark img{width:100%; height:100%; object-fit:cover; display:block;}
+  .brand h1{font-size:19px; margin:0; font-weight:600; letter-spacing:.2px; color:var(--ink);}
   .icon-btn{
     border:1px solid var(--line); background:var(--card); border-radius:9px;
     width:36px;height:36px; display:flex; align-items:center; justify-content:center;
@@ -79,7 +98,7 @@
   .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px;}
 
   .folder-card{
-    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
     padding:14px 14px 12px; cursor:pointer; box-shadow:var(--shadow); position:relative;
     display:flex; flex-direction:column; gap:8px; min-height:88px;
   }
@@ -94,7 +113,7 @@
   .folder-card .more-dots:active{background:var(--paper-dim);}
 
   .doc-card{
-    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
     overflow:hidden; cursor:pointer; box-shadow:var(--shadow);
     display:flex; flex-direction:column;
   }
@@ -123,9 +142,9 @@
   .fab-inner{max-width:760px; width:100%; display:flex; justify-content:flex-end; padding:0 20px; pointer-events:none;}
   .fab{
     pointer-events:all;
-    background:var(--accent); color:#fff; border:none; border-radius:16px;
+    background:var(--accent); color:var(--accent-ink); border:none; border-radius:16px;
     padding:13px 20px; font-size:14.5px; font-weight:600; font-family:'Inter',sans-serif;
-    display:flex; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(181,84,42,0.35);
+    display:flex; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(216,179,74,0.32);
     cursor:pointer;
   }
   .fab:active{transform:scale(0.96);}
@@ -138,20 +157,21 @@
 
   /* ---- Modal ---- */
   .overlay{
-    position:fixed; inset:0; background:rgba(43,38,32,0.45); z-index:50;
+    position:fixed; inset:0; background:rgba(3,7,16,0.62); z-index:50;
     display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none;
     transition:opacity .18s ease;
   }
   .overlay.open{opacity:1; pointer-events:all;}
   .sheet{
-    background:var(--paper); width:100%; max-width:520px; border-radius:20px 20px 0 0;
+    background:var(--paper-dim); width:100%; max-width:520px; border-radius:22px 22px 0 0;
     max-height:88vh; overflow-y:auto; padding:18px 18px 26px;
     transform:translateY(24px); transition:transform .2s ease;
+    box-shadow:0 -10px 40px rgba(0,0,0,0.45);
   }
   .overlay.open .sheet{transform:translateY(0);}
   @media(min-width:600px){
     .overlay{align-items:center;}
-    .sheet{border-radius:18px; margin-bottom:0;}
+    .sheet{border-radius:20px; margin-bottom:0;}
   }
   .sheet-handle{width:38px; height:4px; background:var(--line); border-radius:3px; margin:0 auto 14px;}
   .sheet h2{font-size:19px; margin:0 0 14px; font-weight:600;}
@@ -170,9 +190,9 @@
     flex:1; padding:13px; border-radius:11px; border:none; font-size:14.5px; font-weight:600;
     font-family:'Inter',sans-serif; cursor:pointer;
   }
-  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-primary{background:var(--accent); color:var(--accent-ink);}
   .btn-ghost{background:var(--card); color:var(--ink); border:1px solid var(--line);}
-  .btn-danger{background:var(--danger); color:#fff;}
+  .btn-danger{background:var(--danger); color:var(--accent-ink);}
   .btn:disabled{opacity:.5;}
 
   .upload-choice{display:flex; gap:10px; margin-bottom:16px;}
@@ -216,7 +236,7 @@
   .add-more-row input{display:none;}
 
   .page-nav{display:flex; align-items:center; justify-content:center; gap:14px; margin:-6px 0 12px;}
-  .page-nav-btn{background:none; border:none; color:var(--accent, #B25B36); font-weight:600; font-size:13px; cursor:pointer; padding:4px 2px;}
+  .page-nav-btn{background:none; border:none; color:var(--accent); font-weight:600; font-size:13px; cursor:pointer; padding:4px 2px;}
   .page-nav-btn:hover{text-decoration:underline;}
   #pageIndicator{font-size:12.5px; color:var(--ink-soft); font-weight:600;}
 
@@ -251,7 +271,8 @@
 
   .toast{
     position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
-    background:var(--ink); color:#fff; padding:11px 18px; border-radius:10px; font-size:13.5px;
+    background:#0A1220; color:#F2EDDC; padding:11px 18px; border-radius:10px; font-size:13.5px;
+    border:1px solid var(--line);
     opacity:0; transition:all .25s ease; z-index:80; pointer-events:none; white-space:nowrap;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
@@ -273,7 +294,7 @@
       <div class="icon-btn" id="backBtn" onclick="goBack()" title="Voltar" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
       </div>
-      <div class="brand-mark"></div>
+      <div class="brand-mark"><img src="icon-192.png" alt="Brasão da família"></div>
       <h1>Arquivo da Família</h1>
     </div>
     <div class="header-actions">
@@ -420,7 +441,7 @@
    image data stored separately per doc under key docdata:<id>
 --------------------------------------------- */
 
-const PALETTE = ['#3B6E8F','#A6455B','#C98A2C','#4E7F5C','#8B5FA3','#5B6470','#B5542A','#2E7D8C'];
+const PALETTE = ['#1E3A73','#1C8A5D','#C9A227','#A6455B','#3B6E8F','#4E7F5C','#8B5FA3','#5B6470'];
 const DEFAULT_FOLDERS = [
   {id:'f_philippe', name:'Philippe', parentId:null, color:'#3B6E8F'},
   {id:'f_renata', name:'Renata', parentId:null, color:'#A6455B'},

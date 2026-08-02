@@ -284,6 +284,44 @@
   .install-hint b{color:var(--ink);}
   .search-results-path{font-size:11px; color:var(--ink-soft); margin-bottom:2px;}
   .loading{text-align:center; padding:60px 20px; color:var(--ink-soft); font-size:14px;}
+
+  .tabbar{
+    display:flex; gap:6px; padding:10px 16px 0; max-width:760px; margin:0 auto;
+  }
+  .tab-btn{
+    flex:1; padding:10px; border-radius:11px; border:1px solid var(--line); background:var(--card);
+    color:var(--ink-soft); font-weight:600; font-size:13.5px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .tab-btn.active{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+
+  .control-card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:14px; cursor:pointer; box-shadow:var(--shadow); position:relative;
+    display:flex; flex-direction:column; gap:8px; min-height:88px;
+  }
+  .control-card:active{transform:scale(0.98);}
+  .control-card .fname{font-weight:600; font-size:14.5px; line-height:1.25;}
+  .control-card .fmeta{font-size:11.5px; color:var(--ink-soft);}
+  .control-card .last-value{font-size:12.5px; color:var(--ink); margin-top:2px;}
+  .control-card .more-dots{
+    position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:7px;
+    display:flex; align-items:center; justify-content:center; color:var(--ink-soft);
+  }
+  .control-card .more-dots:active{background:var(--paper-dim);}
+
+  .entry-row{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; display:flex; justify-content:space-between; align-items:flex-start;
+    gap:10px; box-shadow:var(--shadow); margin-bottom:10px;
+  }
+  .entry-row .entry-main{flex:1; min-width:0;}
+  .entry-row .entry-result{font-size:17px; font-weight:700; color:var(--ink);}
+  .entry-row .entry-date{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+  .entry-row .entry-notes{font-size:13px; color:var(--ink-soft); margin-top:6px; white-space:pre-wrap;}
+  .entry-row .entry-del{
+    background:none; border:none; color:var(--danger); cursor:pointer; padding:4px; flex-shrink:0;
+  }
 </style>
 </head>
 <body>
@@ -315,6 +353,11 @@
   </div>
 </div>
 
+<div class="tabbar">
+  <button class="tab-btn" id="tabDocs" onclick="switchTab('docs')">📁 Documentos</button>
+  <button class="tab-btn" id="tabControls" onclick="switchTab('controls')">📊 Controles</button>
+</div>
+
 <div id="breadcrumb" class="breadcrumb"></div>
 
 <main id="main">
@@ -322,10 +365,10 @@
 </main>
 
 <div class="fab-wrap">
-  <div class="fab-inner">
+  <div class="fab-inner" id="fabInner">
     <button class="fab-secondary" onclick="openFolderModal()">+ Pasta</button>
     <button class="fab" onclick="openUploadModal()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
       Documento
     </button>
   </div>
@@ -431,6 +474,52 @@
   </div>
 </div>
 
+<!-- Control type modal (novo controle: Pressão, Glicose, etc.) -->
+<div class="overlay" id="controlTypeOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="controlTypeModalTitle">Novo controle</h2>
+    <div class="field">
+      <label>Nome do controle</label>
+      <input type="text" id="controlTypeNameInput" placeholder="Ex: Pressão, Glicose, Peso...">
+    </div>
+    <div class="field">
+      <label>Cor</label>
+      <div class="color-row" id="controlColorRow"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal('controlTypeOverlay')">Cancelar</button>
+      <button class="btn btn-primary" onclick="submitControlType()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Control entry modal (novo registro: data/hora, resultado, observação) -->
+<div class="overlay" id="controlEntryOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Novo registro</h2>
+    <p id="controlEntryTypeLabel" style="font-size:13px;color:var(--ink-soft);margin-top:-8px;margin-bottom:14px;"></p>
+    <div class="field">
+      <label>Data e horário</label>
+      <input type="datetime-local" id="controlDatetimeInput">
+    </div>
+    <div class="field">
+      <label>Resultado</label>
+      <input type="text" id="controlResultInput" placeholder="Ex: 120x80, 95 mg/dL, 78 kg...">
+    </div>
+    <div class="field">
+      <label>Observação (opcional)</label>
+      <textarea id="controlNotesInput" placeholder="Qualquer anotação sobre esse registro"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal('controlEntryOverlay')">Cancelar</button>
+      <button class="btn btn-primary" id="saveControlEntryBtn" onclick="submitControlEntry()">Salvar registro</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -499,6 +588,12 @@ let state = {
   editingFolderId: null,
   selectedColor: PALETTE[0],
   searchMode: false,
+  activeTab: 'docs',
+  controlTypes: [],
+  controlEntries: [],
+  currentControlTypeId: null,
+  editingControlTypeId: null,
+  selectedControlColor: PALETTE[0],
 };
 
 async function loadData(){
@@ -509,6 +604,8 @@ async function loadData(){
     state.folders = hadFolders ? result.folders : DEFAULT_FOLDERS.slice();
     state.docTypes = hadTypes ? result.docTypes : DEFAULT_TYPES.slice();
     state.docs = result.docs || [];
+    state.controlTypes = result.controlTypes || [];
+    state.controlEntries = result.controlEntries || [];
     if(!hadFolders){
       // primeira vez: cria cada pasta padrão individualmente no Drive
       for(const f of state.folders){
@@ -523,6 +620,8 @@ async function loadData(){
     state.folders = DEFAULT_FOLDERS.slice();
     state.docTypes = DEFAULT_TYPES.slice();
     state.docs = [];
+    state.controlTypes = [];
+    state.controlEntries = [];
   }
   render();
 }
@@ -574,12 +673,52 @@ function countInside(folderId){
 }
 
 /* ---------------- Rendering ---------------- */
+function switchTab(tab){
+  state.activeTab = tab;
+  state.currentControlTypeId = null;
+  render(); afterRenderHook();
+}
+
 function render(){
   state.searchMode = false;
   document.getElementById('searchInput').value='';
-  renderBreadcrumb();
-  renderMain();
-  document.getElementById('backBtn').style.display = state.currentFolderId===null ? 'none' : 'flex';
+  document.getElementById('tabDocs').classList.toggle('active', state.activeTab==='docs');
+  document.getElementById('tabControls').classList.toggle('active', state.activeTab==='controls');
+
+  if(state.activeTab === 'controls'){
+    renderControlsBreadcrumb();
+    renderControlsMain();
+    document.getElementById('backBtn').style.display = state.currentControlTypeId===null ? 'none' : 'flex';
+  } else {
+    renderBreadcrumb();
+    renderMain();
+    document.getElementById('backBtn').style.display = state.currentFolderId===null ? 'none' : 'flex';
+  }
+  updateFab();
+}
+
+function updateFab(){
+  const inner = document.getElementById('fabInner');
+  if(state.activeTab === 'controls'){
+    if(state.currentControlTypeId === null){
+      inner.innerHTML = `<button class="fab" onclick="openControlTypeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+        Controle
+      </button>`;
+    } else {
+      inner.innerHTML = `<button class="fab" onclick="openControlEntryModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+        Registro
+      </button>`;
+    }
+  } else {
+    inner.innerHTML = `
+      <button class="fab-secondary" onclick="openFolderModal()">+ Pasta</button>
+      <button class="fab" onclick="openUploadModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+        Documento
+      </button>`;
+  }
 }
 
 function renderBreadcrumb(){
@@ -602,6 +741,26 @@ function renderBreadcrumb(){
       c.onclick = ()=>{ state.currentFolderId = f.id; render(); };
       bc.appendChild(c);
     });
+  }
+}
+
+function renderControlsBreadcrumb(){
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML='';
+  const rootCrumb = document.createElement('span');
+  rootCrumb.className = 'crumb' + (state.currentControlTypeId===null?' current':'');
+  rootCrumb.textContent = 'Controles';
+  rootCrumb.onclick = ()=>{ state.currentControlTypeId=null; render(); };
+  bc.appendChild(rootCrumb);
+
+  if(state.currentControlTypeId){
+    const t = state.controlTypes.find(x=>x.id===state.currentControlTypeId);
+    const sep = document.createElement('span'); sep.className='sep'; sep.textContent='/';
+    bc.appendChild(sep);
+    const c = document.createElement('span');
+    c.className = 'crumb current';
+    c.textContent = t ? t.name : '';
+    bc.appendChild(c);
   }
 }
 
@@ -676,17 +835,204 @@ function escapeHtml(s){
 
 function enterFolder(id){ state.currentFolderId = id; render(); afterRenderHook(); }
 function goBack(){
+  if(state.activeTab === 'controls'){
+    state.currentControlTypeId = null;
+    render(); afterRenderHook();
+    return;
+  }
   if(state.currentFolderId===null) return;
   const f = getFolder(state.currentFolderId);
   state.currentFolderId = f ? (f.parentId || null) : null;
   render(); afterRenderHook();
 }
 function goHome(){
+  state.activeTab = 'docs';
   state.currentFolderId = null;
+  state.currentControlTypeId = null;
   render(); afterRenderHook();
 }
 
 async function afterRenderHook(){ await hydrateThumbs(); }
+
+/* ---------------- Controles (Pressão, Glicose, etc.) ---------------- */
+function getControlType(id){ return state.controlTypes.find(t=>t.id===id); }
+function getEntriesFor(typeId){
+  return state.controlEntries.filter(e=>e.typeId===typeId).slice().sort((a,b)=> b.datetime.localeCompare(a.datetime));
+}
+
+function renderControlsMain(){
+  const main = document.getElementById('main');
+  let html = '';
+
+  if(state.currentControlTypeId === null){
+    if(state.controlTypes.length === 0){
+      html = `<div class="empty-state">
+        <div class="glyph">📊</div>
+        <p><b>Nenhum controle criado ainda.</b></p>
+        <p>Crie um controle (ex: Pressão, Glicose) com o botão abaixo.</p>
+      </div>`;
+    } else {
+      html += `<div class="section-label">Controles</div><div class="grid">`;
+      state.controlTypes.forEach(t=>{
+        const entries = getEntriesFor(t.id);
+        const last = entries[0];
+        html += `<div class="control-card" onclick="enterControlType('${t.id}')">
+          <div class="tab-bar" style="background:${t.color}"></div>
+          <div class="fname">${escapeHtml(t.name)}</div>
+          <div class="fmeta">${entries.length} ${entries.length===1?'registro':'registros'}</div>
+          ${last ? `<div class="last-value">Último: <b>${escapeHtml(last.result)}</b> — ${formatDateTime(last.datetime)}</div>` : ''}
+          <div class="more-dots" onclick="event.stopPropagation(); openControlTypeContextMenu('${t.id}')">⋯</div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+  } else {
+    const entries = getEntriesFor(state.currentControlTypeId);
+    if(entries.length === 0){
+      html = `<div class="empty-state">
+        <div class="glyph">📊</div>
+        <p><b>Nenhum registro ainda.</b></p>
+        <p>Adicione o primeiro registro com o botão abaixo.</p>
+      </div>`;
+    } else {
+      entries.forEach(e=>{
+        html += `<div class="entry-row">
+          <div class="entry-main">
+            <div class="entry-result">${escapeHtml(e.result)}</div>
+            <div class="entry-date mono">${formatDateTime(e.datetime)}</div>
+            ${e.notes ? `<div class="entry-notes">${escapeHtml(e.notes)}</div>` : ''}
+          </div>
+          <button class="entry-del" onclick="deleteControlEntry('${e.id}')" title="Excluir registro">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>`;
+      });
+    }
+  }
+  main.innerHTML = html;
+}
+
+function formatDateTime(iso){
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return iso;
+  const dateStr = d.toLocaleDateString('pt-BR');
+  const timeStr = d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  return `${dateStr} às ${timeStr}`;
+}
+
+function enterControlType(id){ state.currentControlTypeId = id; render(); afterRenderHook(); }
+
+function buildControlColorRow(){
+  const row = document.getElementById('controlColorRow');
+  row.innerHTML='';
+  PALETTE.forEach(c=>{
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (c===state.selectedControlColor?' selected':'');
+    sw.style.background = c;
+    sw.onclick = ()=>{ state.selectedControlColor = c; buildControlColorRow(); };
+    row.appendChild(sw);
+  });
+}
+function openControlTypeModal(){
+  state.editingControlTypeId = null;
+  document.getElementById('controlTypeModalTitle').textContent = 'Novo controle';
+  document.getElementById('controlTypeNameInput').value = '';
+  state.selectedControlColor = PALETTE[Math.floor(Math.random()*PALETTE.length)];
+  buildControlColorRow();
+  openModal('controlTypeOverlay');
+}
+function openRenameControlTypeModal(id){
+  const t = getControlType(id);
+  state.editingControlTypeId = id;
+  document.getElementById('controlTypeModalTitle').textContent = 'Editar controle';
+  document.getElementById('controlTypeNameInput').value = t.name;
+  state.selectedControlColor = t.color;
+  buildControlColorRow();
+  openModal('controlTypeOverlay');
+}
+async function submitControlType(){
+  const name = document.getElementById('controlTypeNameInput').value.trim();
+  if(!name){ showToast('Dê um nome para o controle.'); return; }
+  let typeObj;
+  if(state.editingControlTypeId){
+    typeObj = getControlType(state.editingControlTypeId);
+    typeObj.name = name; typeObj.color = state.selectedControlColor;
+  } else {
+    typeObj = {id: uid('ct'), name, color: state.selectedControlColor};
+    state.controlTypes.push(typeObj);
+  }
+  try{
+    await apiCall('upsertControlType', { type: typeObj });
+  }catch(e){ showToast('Erro ao salvar o controle. Tente novamente.'); }
+  closeModal('controlTypeOverlay');
+  render(); afterRenderHook();
+  showToast('Controle salvo.');
+}
+function openControlTypeContextMenu(id){
+  const t = getControlType(id);
+  const choice = prompt(`"${t.name}"\n\nDigite:\n1 = Renomear/editar cor\n2 = Excluir controle (e todos os registros)`, '1');
+  if(choice==='1'){ openRenameControlTypeModal(id); }
+  else if(choice==='2'){ deleteControlType(id); }
+}
+async function deleteControlType(id){
+  const t = getControlType(id);
+  const n = getEntriesFor(id).length;
+  const ok = confirm(`Excluir "${t.name}"${n>0? ` e todos os ${n} registro(s)`:''}? Esta ação não pode ser desfeita.`);
+  if(!ok) return;
+  state.controlTypes = state.controlTypes.filter(x=>x.id!==id);
+  state.controlEntries = state.controlEntries.filter(e=>e.typeId!==id);
+  if(state.currentControlTypeId===id) state.currentControlTypeId=null;
+  try{
+    await apiCall('deleteControlTypes', { ids: [id] });
+  }catch(e){ showToast('Erro ao excluir. Tente novamente.'); }
+  render(); afterRenderHook();
+  showToast('Controle excluído.');
+}
+
+function toLocalDatetimeInputValue(date){
+  const pad = n=>String(n).padStart(2,'0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+function openControlEntryModal(){
+  if(!state.currentControlTypeId) return;
+  const t = getControlType(state.currentControlTypeId);
+  document.getElementById('controlEntryTypeLabel').textContent = `Controle: ${t.name}`;
+  document.getElementById('controlDatetimeInput').value = toLocalDatetimeInputValue(new Date());
+  document.getElementById('controlResultInput').value = '';
+  document.getElementById('controlNotesInput').value = '';
+  openModal('controlEntryOverlay');
+}
+async function submitControlEntry(){
+  const result = document.getElementById('controlResultInput').value.trim();
+  if(!result){ showToast('Preencha o resultado.'); return; }
+  const localValue = document.getElementById('controlDatetimeInput').value;
+  const datetime = localValue ? new Date(localValue).toISOString() : new Date().toISOString();
+  const notes = document.getElementById('controlNotesInput').value.trim();
+  const btn = document.getElementById('saveControlEntryBtn');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try{
+    const entry = await apiCall('addControlEntry', {
+      typeId: state.currentControlTypeId, datetime, result, notes
+    });
+    state.controlEntries.push(entry);
+    closeModal('controlEntryOverlay');
+    render(); afterRenderHook();
+    showToast('Registro salvo.');
+  }catch(e){
+    showToast('Erro ao salvar o registro. Tente novamente.');
+  }
+  btn.disabled = false; btn.textContent = 'Salvar registro';
+}
+async function deleteControlEntry(id){
+  const ok = confirm('Excluir este registro? Esta ação não pode ser desfeita.');
+  if(!ok) return;
+  state.controlEntries = state.controlEntries.filter(e=>e.id!==id);
+  try{
+    await apiCall('deleteControlEntry', { id });
+  }catch(e){ showToast('Erro ao excluir. Tente novamente.'); }
+  render(); afterRenderHook();
+  showToast('Registro excluído.');
+}
 
 /* ---------------- Search ---------------- */
 let searchTimer=null;
